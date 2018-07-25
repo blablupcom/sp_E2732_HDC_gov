@@ -10,8 +10,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 
-#### FUNCTIONS 1.2
-import requests
+#### FUNCTIONS 1.0
 
 def validateFilename(filename):
     filenameregex = '^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+_[0-9][0-9][0-9][0-9]_[0-9QY][0-9]$'
@@ -86,40 +85,32 @@ def convert_mth_strings ( mth_string ):
 
 #### VARIABLES 1.0
 
-entity_id = "E3532_FHDC_gov"
-url = "https://www.westsuffolk.gov.uk/Council/Finance_and_Statistics/paymentstosuppliers.cfm"
+entity_id = "E2732_HDC_gov"
+url = "https://www.hambleton.gov.uk/downloads/download/400/payments_to_suppliers_2016-17"
 errors = 0
 data = []
 
 
 #### READ HTML 1.0
 
-html = requests.get(url)
-soup = BeautifulSoup(html.text, 'lxml')
+html = urllib2.urlopen(url)
+soup = BeautifulSoup(html, 'lxml')
 
 #### SCRAPE DATA
 
-blocks = soup.find('div', attrs={'id':'cs_control_1470'}).find_all('a', href=True)
+blocks = soup.find('ul', attrs = {'class': 'item-list item-list--rich'}).find_all('li')
 for block in blocks:
-        year_link = block['href']
-        if 'http' not in year_link:
-            year_link = 'https://www.westsuffolk.gov.uk' + year_link
+    type_file = block.find('small').text
+    if 'CSV' in type_file:
+        if 'http' not in block.find('a')['href']:
+            url = 'https://www.cravendc.gov.uk' + block.find('a')['href'].replace('/downloads/file/', '/download/downloads/id/')+'.csv'
         else:
-            year_link = year_link
-        year_html = requests.get(year_link)
-        year_soup = BeautifulSoup(year_html.text, 'lxml')
-        f_blocks = year_soup.find('div', id='cs_control_1470').find_all('a')
-        for f_block in f_blocks:
-            if 'http' not in f_block['href']:
-                url = 'https://www.westsuffolk.gov.uk' + f_block['href']
-            else:
-                url = f_block['href']
-            file_name = f_block.text.replace('(CSV)', '').replace('-19', '').strip()
-            csvMth = file_name.split()[-2][:3]
-            csvYr = file_name[-4:]
-            csvMth = convert_mth_strings(csvMth.upper())
-            data.append([csvYr, csvMth, url])
-
+            url = block.find('a')['href'].replace('/downloads/file/', '/download/downloads/id/')+'.csv'
+        file_name = block.find('a').text.strip()
+        csvMth = file_name.split('-')[-1].strip()[:3]
+        csvYr = '20'+file_name.split('-')[1][-2:]
+        csvMth = convert_mth_strings(csvMth.upper())
+        data.append([csvYr, csvMth, url])
 
 #### STORE DATA 1.0
 
